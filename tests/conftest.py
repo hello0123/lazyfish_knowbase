@@ -8,14 +8,19 @@ from app.main import app
 
 
 @pytest.fixture()
-def client(tmp_path):
+def db_session_factory(tmp_path):
+    """獨立的 SQLite 測試資料庫,回傳一個可重複呼叫的 session factory。"""
     db_path = tmp_path / "test.db"
     engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
-    testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    factory = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
+    return factory
 
+
+@pytest.fixture()
+def client(db_session_factory):
     def override_get_db():
-        db = testing_session_local()
+        db = db_session_factory()
         try:
             yield db
         finally:

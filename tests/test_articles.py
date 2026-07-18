@@ -1,3 +1,13 @@
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _no_real_processing(monkeypatch):
+    """這個檔案只測 CRUD 契約;背景處理管線改由 test_processing.py 測試,
+    避免每個測試都真的去打網路/呼叫 Ollama。"""
+    monkeypatch.setattr("app.routers.articles.process_article", lambda *args, **kwargs: None)
+
+
 def test_create_article_url(client):
     resp = client.post("/articles", json={"source_type": "url", "source_url": "https://example.com"})
     assert resp.status_code == 201

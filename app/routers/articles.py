@@ -1,15 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Article
 from app.schemas import ArticleCreate, ArticleResponse
+from app.services.processing import process_article
 
 router = APIRouter(prefix="/articles", tags=["articles"])
 
 
 @router.post("", response_model=ArticleResponse, status_code=201)
-def create_article(payload: ArticleCreate, db: Session = Depends(get_db)) -> Article:
+def create_article(
+    payload: ArticleCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+) -> Article:
     if payload.source_type == "url" and not payload.source_url:
         raise HTTPException(400, "source_url is required when source_type is 'url'")
     if payload.source_type == "note" and not payload.raw_content:
@@ -24,6 +29,8 @@ def create_article(payload: ArticleCreate, db: Session = Depends(get_db)) -> Art
     db.add(article)
     db.commit()
     db.refresh(article)
+
+    background_tasks.add_task(process_article, article.id)
     return article
 
 
