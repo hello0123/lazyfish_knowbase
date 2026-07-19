@@ -24,5 +24,11 @@ class ArticleResponse(BaseModel):
     summary: str | None
     status: str
     created_at: datetime
+    tags: list[str] = []
 
     model_config = {"from_attributes": True}
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def _tag_names(cls, tags: list) -> list[str]:
+        return [tag.name if hasattr(tag, "name") else tag for tag in tags]
